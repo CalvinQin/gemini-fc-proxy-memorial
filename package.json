@@ -1,0 +1,14 @@
+{
+  "name": "gemini-fc-memorial",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": "22.19.0"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test server.test.mjs"
+  }
+}
