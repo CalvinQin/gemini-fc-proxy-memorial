@@ -1,43 +1,58 @@
 # 合成验证与公开内容审查
 
-核验日期：2026-10-22；原始实现提交：`67986bbb05264a0eaf616c70130663339211f1f1`。本次补文档保留原运行代码与 6 项测试。所有运行发生在独立候选目录，未访问主应用数据或真实模型。
+核验日期：2026-10-22。原始实现提交 `67986bbb05264a0eaf616c70130663339211f1f1`；发布文档基线 `266da526961c246b0c52daa93ff78a8b85d79a87`；本轮只在独立项目修复慢上传取消并新增测试。所有测试使用随机本机 HTTP 端口与注入的假上游，不使用真实模型或业务数据。
 
-## 已执行与通过
+## 实际结果
 
-- 干净候选基线、原始唯一提交及其跟踪文件人工阅读；Git 无远端、无 tag。Git 作者身份属于正常历史元数据，不等同于无身份的匿名发布。
-- `node --version` → `v22.19.0`；`node --check server.mjs` → 退出码 0。
-- `node --test server.test.mjs` → **6 通过、0 失败、0 跳过**；测试仅建立随机本机 HTTP 端口，上游注入假实现。
-- `git fsck --full --no-reflogs` → 退出码 0。
-- 逐文件审查和模式扫描未发现业务模块、客户数据、真实 Google/阿里/GitHub 凭据、业务数据库 URL、生产服务器地址或阿里函数配置。`.env.example` 两个凭据为空；测试令牌均为 `synthetic-*`。模式扫描不是不存在其他秘密的数学保证，公开前仍审查完整 diff 与历史。
-- `package.json` 无 dependencies、devDependencies、peerDependencies、optionalDependencies；只导入 Node 内置模块和本地模块，无包安装脚本、打包二进制、企业目录或付费许可证依赖。
+- Node.js **22.19.0**；`node --check server.mjs` 与 `node --check server.test.mjs` 通过。
+- `node --test server.test.mjs`：**14 通过、0 失败、0 跳过**；保留原 6 项并新增 8 项。
+- 回归先复现后修复：新用例运行于未修复服务时，慢上传用例在 1.5 秒保护限时内未结束而失败，其余 13 项通过。服务增加入站取消后，慢上传在约 150 毫秒服务端截止时终止，早于 2 秒客户端保护定时器；14 项全部通过。
+- 机器可读的 14 项结果与测试源码摘要见 [lifecycle-tests.json](lifecycle-tests.json)。断流断言的保护截止位于 `assert.rejects` 外层，测试本身超时不会被误判为客户端中止成功。
+- `git diff --check` 与 `sha256sum -c SHA256SUMS` 通过。源码 SHA 清单随本轮变更重做；最新归档摘要由交接结果提供。
 
-| 测试 | 本轮证实的行为 |
+| 用例 | 本轮证实的行为 |
 | --- | --- |
-| missing credentials | 没有必要凭据时拒绝启动 |
-| auth rejects | 鉴权失败先拒绝，不调用注入上游 |
-| arbitrary destinations/routes | 顶层自定义地址和未知路由被拒绝 |
-| model catalog | 固定官方地址、禁止重定向、仅返回允许模型与假上游交集 |
-| valid SSE | 本机 HTTP 返回 SSE 类型和完整合成帧；未度量 EOF 前首块延迟 |
-| upstream rejection | 上游 401 内容中的合成 Key 不被回显 |
+| missing credentials | 必要凭据缺失时拒绝启动 |
+| auth rejects | 错误令牌先拒绝，不调用上游 |
+| arbitrary destinations/routes | 自定义地址和未知路由被拒绝 |
+| model catalog | 固定官方地址、禁止重定向、按允许模型过滤假上游目录 |
+| original SSE | 保留原完整合成 SSE 内容断言；单独不作首块时序证据 |
+| upstream rejection | 上游错误中的合成 Key 不回显 |
+| slow upload timeout | 请求未结束时先占满单槽并返回 429；服务端截止销毁入站 socket，客户端 close，上游未调用，下一次请求成功 |
+| client cancels upload | 客户端主动关闭未结束上传，服务端标记 aborted，无上游调用，下一次请求成功 |
+| upstream response timeout | 上游收到 abort，客户端收到固定 504，下一次请求成功 |
+| real HTTP first SSE frame | 上游控制器保持打开且未发送 EOF，客户端已经读取首块；之后才发送 DONE/结束 |
+| upstream midstream failure | 客户端先收到 partial；上游错误后读取拒绝，不伪造 DONE，下一次请求成功 |
+| stalled stream deadline | 截止触发上游 signal 与 stream cancel，客户端继续读取失败，下一次请求成功 |
+| client cancels SSE | 客户端主动 abort，读取拒绝，上游 cancel，下一次请求成功 |
+| body too large | 完整上传体超过测试上限时 413，无上游调用，下一次请求成功 |
 
-## 失败、已知缺口与未测试
+测试超时使用 100–150 毫秒、单并发和缩小的体积上限以可靠触发同一实现；默认生产配置仍为 60 秒、2 槽、1 MiB。每个新增用例有总超时，原始 HTTP 客户端有保护截止和销毁清理，fixture 关闭所有本机连接。用例验证服务端与客户端的生命周期，不宣称真实公网时延或服务容量。
 
-本轮 6 项用例没有失败，但它们不覆盖所有代码分支。尤其旧 SSE 用例名称含 “without buffering”，其实际断言只读取最终正文，不能当作真实增量时序证据。
+## 修复边界
 
-静态审查确认：`timeoutMs` 的定时器只中止上游信号，不能及时结束 POST 请求体的 `for await`。有效令牌持有者可以让两个慢速未结束上传长期占用 `active` 槽；Node 本身的请求超时也没有在此实现中显式配置。README 已收窄“60 秒超时”的表述，公开候选保留实现；公网部署前需补入站读取超时/取消与实测。响应没有单独字节上限。
+原问题：定时器只中止 fetch 信号，POST 请求体 `for await` 可能一直等待，导致 `finally` 无法及时回收活动槽。
 
-未测试：请求体上限边界、并发槽回收、超时及断线竞态、SSE 首块到达与真实背压、工具 ID/签名完整往返、多进程限流、模型能力、Google 有效 Key、费用、FC 启动/鉴权/TLS/网关缓冲/负载。服务是通用透传代理，不校验或执行业务工具，不提供客户权限和业务确认流程。
+现在同一 abort 信号会在请求体未完成时销毁入站请求，读取退出后在 `finally` 清理计时器、取消监听器和客户端事件监听器、回收槽位。发起上游前检查取消状态。若响应 socket 已关闭，不再尝试发送 JSON 错误；已开始的流直接终止。
 
-因此这份结果支持“可公开审查的最小源码候选”，不支持“已通过生产部署验收”。
+未新增依赖、模型 SDK、收费资源或外部代理地址。服务仍是通用透传代理，不执行工具或实现业务权限/确认。版本保持首次未发布候选 `0.1.0`，未打公开 tag。
 
-## 许可与版本核验来源
+## 公开内容与许可
 
-以下均在 2026-10-22 读取官方页面，未安装新依赖：
+逐文件及 Git 历史审查未发现业务模块、客户数据、真实 Google/阿里/GitHub 凭据、业务数据库 URL、生产地址或阿里函数配置。`.env.example` 凭据为空，测试值均为合成值。模式扫描仅辅助审查，不证明绝对不存在秘密。Git 作者身份仍会随完整历史公开；本轮不改写历史。
 
-- [Node 22.19.0 发布页](https://nodejs.org/en/blog/release/v22.19.0)：2025-08-28 发布，LTS，非 RC/开发版；本轮只声明此精确版本的测试结果。
-- [Node 版本生命周期](https://nodejs.org/en/about/previous-releases)：实际部署应采用受支持 LTS，并单独核验安全补丁。
-- [Node 22.19.0 LICENSE](https://github.com/nodejs/node/blob/v22.19.0/LICENSE)：Node 自身许可及所包含第三方组件声明。当前归档不捆绑 Node。
-- [MIT](https://opensource.org/license/mit)：允许商业使用与分发，保留版权和许可声明；本项目 LICENSE 与标准条款一致。
-- [Google OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai)：官方兼容端点、示例模型、`GET /models` 与当前 Beta 边界；这些文档事实不代表真实授权模型已调用成功。
-- [阿里 Custom Runtime](https://www.alibabacloud.com/help/en/functioncompute/custom-runtime/)：启动命令/监听端口可配置；本轮未选预览运行时或创建资源。
-- [npm private](https://docs.npmjs.com/cli/v11/configuring-npm/package-json#private)：`private: true` 防止 npm 发布，可保留作为独立源码项目保护。
+无 dependencies/devDependencies/peerDependencies/optionalDependencies，未打包 Node 二进制、企业目录或付费功能。MIT 原文保持不变。Git 无远端、无 tag，未公开上传。
+
+## 未测试
+
+真实 Google Key/模型能力/费用、阿里 FC 启动/鉴权/TLS/网关缓冲、互联网断线与负载、多进程限流、慢请求头、大响应内存上限、持续背压和复杂工具签名往返仍未验。响应尚未设置独立字节上限。该结果支持公开审阅修复后的最小源码候选，不等于生产部署验收。
+
+## 官方依据（2026-10-22）
+
+- [Node 22.19.0 发布页](https://nodejs.org/en/blog/release/v22.19.0)：该精确版本为稳定 LTS 发布，非 RC；并非宣称最新安全补丁。
+- [Node 生命周期](https://nodejs.org/en/about/previous-releases)：实际部署应另行核实受支持 LTS 与安全补丁。
+- [Node 22.19.0 LICENSE](https://github.com/nodejs/node/blob/v22.19.0/LICENSE)：分发 Node 二进制需保留其完整组件许可，本项目源码包不捆绑 Node。
+- [MIT](https://opensource.org/license/mit)：商业使用与分发允许，须保留版权/许可声明。
+- [Google OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai)：官方端点、模型目录和 Beta 限制；不代表真实 Key 已验。
+- [阿里 Custom Runtime](https://www.alibabacloud.com/help/en/functioncompute/custom-runtime/)：可配置启动命令和监听端口，本轮未创建资源或选择预览运行时。
+- [npm private](https://docs.npmjs.com/cli/v11/configuring-npm/package-json#private)：保留 `private: true` 防止误发 npm，不影响公开 GitHub 源码。

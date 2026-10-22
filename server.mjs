@@ -27,9 +27,15 @@ export function createProxy({ apiKey, proxyToken, allowedModels = ['gemini-3.8-f
     if (active >= maxConcurrent) return fail(res, 429, 'BUSY');
     active++;
     const abort = new AbortController();
+    // Aborting fetch alone cannot interrupt an unfinished request-body iterator.
+    // Close that inbound socket too, so its iterator settles and finally releases the slot.
+    const stopIncompleteUpload = () => { if (!req.complete && !req.destroyed) req.destroy(); };
+    const clientAborted = () => abort.abort();
+    const responseClosed = () => { if (!res.writableEnded) abort.abort(); };
+    abort.signal.addEventListener('abort', stopIncompleteUpload, { once: true });
     const timer = setTimeout(() => abort.abort(), timeoutMs);
-    req.once('aborted', () => abort.abort());
-    res.once('close', () => { if (!res.writableEnded) abort.abort(); });
+    req.once('aborted', clientAborted);
+    res.once('close', responseClosed);
     try {
       let body;
       if (req.method === 'POST') {
@@ -45,6 +51,7 @@ export function createProxy({ apiKey, proxyToken, allowedModels = ['gemini-3.8-f
         const fields = new Set(['model', 'messages', 'temperature', 'tools', 'tool_choice', 'stream', 'stream_options', 'max_tokens', 'response_format']);
         if (Object.keys(body).some(key => !fields.has(key))) return fail(res, 400, 'UNSUPPORTED_FIELD');
       }
+      abort.signal.throwIfAborted();
       const response = await fetchImpl(`${GOOGLE}/${route}`, {
         method: req.method, redirect: 'error', signal: abort.signal,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
@@ -60,9 +67,15 @@ export function createProxy({ apiKey, proxyToken, allowedModels = ['gemini-3.8-f
       res.writeHead(200, { 'Content-Type': body.stream ? 'text/event-stream' : 'application/json', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no' });
       await pipeline(Readable.fromWeb(response.body), res, { signal: abort.signal });
     } catch {
-      if (!res.headersSent) fail(res, abort.signal.aborted ? 504 : 502, 'UPSTREAM_UNAVAILABLE');
+      if (!res.headersSent && !res.destroyed) fail(res, abort.signal.aborted ? 504 : 502, 'UPSTREAM_UNAVAILABLE');
       else res.destroy(); // A partial stream is never turned into a fake successful response.
-    } finally { clearTimeout(timer); active--; }
+    } finally {
+      clearTimeout(timer);
+      abort.signal.removeEventListener('abort', stopIncompleteUpload);
+      req.removeListener('aborted', clientAborted);
+      res.removeListener('close', responseClosed);
+      active--;
+    }
   });
 }
 

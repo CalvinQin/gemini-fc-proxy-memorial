@@ -1,0 +1,109 @@
+{
+  "date": "2026-10-22",
+  "runtime": "Node.js 22.19.0",
+  "beforeFix": {
+    "passed": 13,
+    "failed": 1,
+    "failure": "unfinished upload did not close before synthetic fixture guard"
+  },
+  "afterFix": {
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 657.64495
+  },
+  "checks": [
+    {
+      "index": 1,
+      "name": "fails closed with missing credentials",
+      "status": "passed",
+      "durationMs": 1.65687
+    },
+    {
+      "index": 2,
+      "name": "auth rejects before contacting Google",
+      "status": "passed",
+      "durationMs": 34.532747
+    },
+    {
+      "index": 3,
+      "name": "rejects arbitrary proxy destinations and unknown routes",
+      "status": "passed",
+      "durationMs": 16.892716
+    },
+    {
+      "index": 4,
+      "name": "lists only allowed models and uses server credentials with redirects blocked",
+      "status": "passed",
+      "durationMs": 10.70128
+    },
+    {
+      "index": 5,
+      "name": "forwards valid SSE without buffering",
+      "status": "passed",
+      "durationMs": 9.098868
+    },
+    {
+      "index": 6,
+      "name": "upstream rejection cannot echo credentials",
+      "status": "passed",
+      "durationMs": 8.085512
+    },
+    {
+      "index": 7,
+      "name": "server timeout closes unfinished uploads and recovers the occupied concurrency slot",
+      "status": "passed",
+      "durationMs": 161.588436
+    },
+    {
+      "index": 8,
+      "name": "client cancellation of an unfinished upload releases the slot without an upstream call",
+      "status": "passed",
+      "durationMs": 9.376937
+    },
+    {
+      "index": 9,
+      "name": "upstream response timeout aborts the upstream and frees the slot with a safe 504",
+      "status": "passed",
+      "durationMs": 106.867586
+    },
+    {
+      "index": 10,
+      "name": "delivers the first SSE frame over HTTP before upstream EOF",
+      "status": "passed",
+      "durationMs": 7.041368
+    },
+    {
+      "index": 11,
+      "name": "upstream midstream failure terminates the client stream without a false DONE and recovers the slot",
+      "status": "passed",
+      "durationMs": 9.33138
+    },
+    {
+      "index": 12,
+      "name": "deadline cancels a stalled SSE upstream and closes the client stream before releasing the slot",
+      "status": "passed",
+      "durationMs": 155.783037
+    },
+    {
+      "index": 13,
+      "name": "client cancellation of SSE aborts the upstream and restores the slot",
+      "status": "passed",
+      "durationMs": 10.710203
+    },
+    {
+      "index": 14,
+      "name": "rejects a fully uploaded oversized body without using upstream or retaining its slot",
+      "status": "passed",
+      "durationMs": 6.640138
+    }
+  ],
+  "network": "loopback HTTP only; injected synthetic upstreams",
+  "realModelCalls": 0,
+  "newDependencies": 0,
+  "sourceSha256": {
+    "server.mjs": "d9c06d9645f6d7202b31e63e8a474da1d9ab4614374f67fabec98111b1e156a8",
+    "server.test.mjs": "8ede9aa4701cb208866be75753ec3c612429d71d3f151ce41eba7be98be48b9e"
+  },
+  "limits": "Not a production/FC/TLS/load test; stream failure assertions bounded outside assert.rejects."
+}
