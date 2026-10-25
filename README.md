@@ -4,6 +4,12 @@
 
 源码版本 **0.1.0**（2026-10-22）。公开仓库名采用 `gemini-fc-proxy-memorial`，包名保留 `gemini-fc-memorial`。源码发布与服务部署分别进行：本项目仅完成本机合成测试，真实 Google Key、模型调用和阿里 FC 部署均未验收。测试结果和已知限制见 [验证记录](docs/VERIFICATION.md)，源码发布流程见 [发布说明](docs/RELEASE.md)。
 
+## 当前发布状态（2026-10-25 只读核实）
+
+源码已公开至 [CalvinQin/gemini-fc-proxy-memorial](https://github.com/CalvinQin/gemini-fc-proxy-memorial)，GitHub 匿名仓库 API 返回 200、public、MIT；默认分支为 `codex/initial-release`。已发布的 `v0.1.0` 标签解析至 `7988bf965e2cc39f7260c32e5596ae0b2d97c5f5`，与核实时远端 HEAD 一致。本次只纠正文档中的旧发布状态，保留版本 0.1.0 及既有标签。
+
+公开源码不代表服务部署：真实 Google Key、模型调用、阿里 FC 网关与生产负载仍未验收；原生产函数未由本项目删除。该项目是重新编写的通用桥接服务，不是原 TradeFlow 私有函数代码和凭据的公开归档。
+
 ## 能做什么
 
 - `GET /health`：进程存活检查，不探测上游。

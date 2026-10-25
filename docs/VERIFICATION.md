@@ -2,6 +2,12 @@
 
 核验日期：2026-10-22。原始实现提交 `67986bbb05264a0eaf616c70130663339211f1f1`；发布文档基线 `266da526961c246b0c52daa93ff78a8b85d79a87`；本轮只在独立项目修复慢上传取消并新增测试。所有测试使用随机本机 HTTP 端口与注入的假上游，不使用真实模型或业务数据。
 
+## 源码发布与服务验证分开记录（2026-10-25 只读核实）
+
+源码已公开至 [CalvinQin/gemini-fc-proxy-memorial](https://github.com/CalvinQin/gemini-fc-proxy-memorial)，GitHub 匿名仓库 API 返回 200、public、MIT；默认分支为 `codex/initial-release`。已发布的 `v0.1.0` 标签解析至 `7988bf965e2cc39f7260c32e5596ae0b2d97c5f5`，与核实时远端 HEAD 一致。本次只纠正文档中的旧发布状态，保留版本 0.1.0 及既有标签。
+
+公开源码不代表服务部署：真实 Google Key、模型调用、阿里 FC 网关与生产负载仍未验收；原生产函数未由本项目删除。该项目是重新编写的通用桥接服务，不是原 TradeFlow 私有函数代码和凭据的公开归档。
+
 ## 实际结果
 
 - Node.js **22.19.0**；`node --check server.mjs` 与 `node --check server.test.mjs` 通过。
@@ -35,13 +41,13 @@
 
 现在同一 abort 信号会在请求体未完成时销毁入站请求，读取退出后在 `finally` 清理计时器、取消监听器和客户端事件监听器、回收槽位。发起上游前检查取消状态。若响应 socket 已关闭，不再尝试发送 JSON 错误；已开始的流直接终止。
 
-未新增依赖、模型 SDK、收费资源或外部代理地址。服务仍是通用透传代理，不执行工具或实现业务权限/确认。版本保持首次未发布候选 `0.1.0`，未打公开 tag。
+未新增依赖、模型 SDK、收费资源或外部代理地址。服务仍是通用透传代理，不执行工具或实现业务权限/确认。实现验证时为尚未发布的 `0.1.0` 候选；后来已公开源码并发布 `v0.1.0`，本轮未修改版本、业务源码或既有 tag。
 
 ## 公开内容与许可
 
 逐文件及 Git 历史审查未发现业务模块、客户数据、真实 Google/阿里/GitHub 凭据、业务数据库 URL、生产地址或阿里函数配置。`.env.example` 凭据为空，测试值均为合成值。模式扫描仅辅助审查，不证明绝对不存在秘密。Git 作者身份仍会随完整历史公开；本轮不改写历史。
 
-无 dependencies/devDependencies/peerDependencies/optionalDependencies，未打包 Node 二进制、企业目录或付费功能。MIT 原文保持不变。Git 无远端、无 tag，未公开上传。
+无 dependencies/devDependencies/peerDependencies/optionalDependencies，未打包 Node 二进制、企业目录或付费功能。MIT 原文保持不变。上述内容审查发生在发布准备阶段；截至 2026-10-25，远端仓库已匿名可读，`v0.1.0` 已发布，见本页开头的独立公开状态核验。
 
 ## 未测试
 

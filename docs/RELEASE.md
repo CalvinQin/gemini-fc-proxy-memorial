@@ -2,9 +2,15 @@
 
 源码版本日期：2026-10-22。本文件描述 0.1.0 的独立源码发布流程；真实服务部署与模型验收分开，尚未完成真实 Google 或阿里 FC 验收。
 
+## 已核实的公开状态（2026-10-25 只读核实）
+
+源码已公开至 [CalvinQin/gemini-fc-proxy-memorial](https://github.com/CalvinQin/gemini-fc-proxy-memorial)，GitHub 匿名仓库 API 返回 200、public、MIT；默认分支为 `codex/initial-release`。已发布的 `v0.1.0` 标签解析至 `7988bf965e2cc39f7260c32e5596ae0b2d97c5f5`，与核实时远端 HEAD 一致。本次只纠正文档中的旧发布状态，保留版本 0.1.0 及既有标签。
+
+公开源码不代表服务部署：真实 Google Key、模型调用、阿里 FC 网关与生产负载仍未验收；原生产函数未由本项目删除。该项目是重新编写的通用桥接服务，不是原 TradeFlow 私有函数代码和凭据的公开归档。
+
 ## 版本与文件
 
-`package.json` 为 `0.1.0`，包名保留 `gemini-fc-memorial`；公开 GitHub 仓库名采用 `gemini-fc-proxy-memorial`，源码标签为 `v0.1.0`。保留 `private: true`，不发布 npm 包。源码提交、归档和校验由维护者复核后，再由发布负责人创建远端、推送与打 tag；本文不声明这些外部动作已经完成，不能将“发布源码”写成“生产部署完成”。
+`package.json` 为 `0.1.0`，包名保留 `gemini-fc-memorial`；公开 GitHub 仓库名采用 `gemini-fc-proxy-memorial`，源码标签为 `v0.1.0`。保留 `private: true`，不发布 npm 包。下列发布顺序保留准备阶段的流程，公开状态以上方匿名核实结果为准；不要重复创建仓库或移动既有 tag，也不能将“发布源码”写成“生产部署完成”。
 
 本轮原始实现提交为 `67986bbb05264a0eaf616c70130663339211f1f1`。后续补充说明和校验材料，并修复慢上传无法取消问题；原 6 个测试场景保留，新增 8 个生命周期/流式回归。最终 Git commit 标识由交接结果提供，避免文档引用自身提交形成循环。
 
